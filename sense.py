@@ -11,13 +11,32 @@ import time
 import datetime
 from sense_hat import SenseHat
 
-TEMP_OFFSET=5
+TEMP_OFFSET = 5
+OUTLIER_THRESHOLD = 2
 retry = 15
 
 a = sys.argv[1]
 
 sense = SenseHat()
 sense.clear()
+
+def recordTemp(temp):
+    with open('/tmp/lastTemp.txt','r+') as f:
+        ots = f.read()
+        ot = float( ots.replace("\n","") )
+        if ot < temp:
+            if temp - ot > OUTLIER_THRESHOLD:
+                val = ot
+            else:
+                val = temp
+        elif ot >= temp:
+            if ot - temp > OUTLIER_THRESHOLD:
+                val = ot
+            else:
+                val = temp
+        with open('/tmp/lastTemp.txt','w+') as f:
+            f.write(str(val))
+    f.closed
 
 def log(name,retry,r):
     with open('/tmp/rtcnt.txt','a') as f:
@@ -44,9 +63,7 @@ def get_data(func,name,upper,lower):
             retry -= 1
             time.sleep( 1 )
         else:
-            log(name,retry,r)
             return(r)
-    log(name,retry,r)
     sys.exit(3)
 
 if a == 'temp':
@@ -54,6 +71,7 @@ if a == 'temp':
     if ht > 0:
         t = ht - (( get_cpu_temp()-ht )/TEMP_OFFSET )
         m = round(1.8*t + 23 , 1)
+        recordTemp(m)
     else:
         m = 0
 
