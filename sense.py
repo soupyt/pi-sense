@@ -21,7 +21,7 @@ sense = SenseHat()
 sense.clear()
 
 def recordTemp(temp):
-    with open('/tmp/lastTemp.txt','r+') as f:
+    with open('/var/run/lastTemp.txt','r+') as f:
         ots = f.read()
         ot = float( ots.replace("\n","") )
         if ot < temp:
@@ -37,11 +37,12 @@ def recordTemp(temp):
         with open('/tmp/lastTemp.txt','w+') as f:
             f.write(str(val))
     f.closed
+    return(val)
 
 def log(name,retry,r):
-    with open('/tmp/rtcnt.txt','a') as f:
-        f.write(curTime()+' '+str(name)+'('+str(retry)+'): '+str(r)+'\n')
-    f.closed
+    with open('/tmp/rtcnt.txt','a') as l:
+        l.write(curTime()+' '+str(name)+'('+str(retry)+'): '+str(r)+'\n')
+    l.closed
 
 def curTime():
     now = datetime.datetime.now()
@@ -63,7 +64,9 @@ def get_data(func,name,upper,lower):
             retry -= 1
             time.sleep( 1 )
         else:
+            log(name,retry,r)
             return(r)
+    log(name,retry,r)
     sys.exit(3)
 
 if a == 'temp':
@@ -71,7 +74,7 @@ if a == 'temp':
     if ht > 0:
         t = ht - (( get_cpu_temp()-ht )/TEMP_OFFSET )
         m = round(1.8*t + 23 , 1)
-        recordTemp(m)
+        m = recordTemp(m)
     else:
         m = 0
 
