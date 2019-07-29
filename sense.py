@@ -17,25 +17,32 @@ retry = 15
 
 a = sys.argv[1]
 
+
+lastTemp = '/var/run/lastTemp.txt'
+
 sense = SenseHat()
 sense.clear()
 
 def recordTemp(temp):
-    with open('/var/run/lastTemp.txt','r+') as f:
-        ots = f.read()
-        ot = float( ots.replace("\n","") )
-        if ot < temp:
-            if temp - ot > OUTLIER_THRESHOLD:
-                val = ot
-            else:
-                val = temp
-        elif ot >= temp:
-            if ot - temp > OUTLIER_THRESHOLD:
-                val = ot
-            else:
-                val = temp
-        with open('/tmp/lastTemp.txt','w+') as f:
-            f.write(str(val))
+    if os.path.isfile(lastTemp):
+        with open(lastTemp,'r+') as f:
+            ots = f.read()
+            ot = float( ots.replace("\n","") )
+            if ot < temp:
+                if temp - ot > OUTLIER_THRESHOLD:
+                    val = ot
+                else:
+                    val = temp
+            elif ot >= temp:
+                if ot - temp > OUTLIER_THRESHOLD:
+                    val = ot
+                else:
+                    val = temp
+            with open(lastTemp,'w+') as f:
+                f.write(str(val))
+    else:
+        with open(lastTemp,'w+') as f:
+            f.write(str(temp))
     f.closed
     return(val)
 
@@ -69,30 +76,34 @@ def get_data(func,name,upper,lower):
     log(name,retry,r)
     sys.exit(3)
 
-if a == 'temp':
-    ht = get_data(sense.get_temperature_from_pressure(),a,50,10)
-    if ht > 0:
-        t = ht - (( get_cpu_temp()-ht )/TEMP_OFFSET )
-        m = round(1.8*t + 23 , 1)
-        m = recordTemp(m)
+def checkOptions(a):
+    if a == 'temp':
+        ht = get_data(sense.get_temperature_from_pressure(),a,50,10)
+        if ht > 0:
+            t = ht - (( get_cpu_temp()-ht )/TEMP_OFFSET )
+            m = round(1.8*t + 23 , 1)
+            m = recordTemp(m)
+        else:
+            m = 0
+    
+    elif a == 'press':
+        m = get_data(sense.get_pressure(),a,1200,950)
+    
+    elif a == 'humid':
+        m = get_data(sense.get_humidity(),a,50,5)
+    
+    elif a == 'comp':
+        m = get_data(sense.get_compass(),a,361,1)
+    
     else:
-        m = 0
+        print("Usage: sense <comp|temp|humid|press>")
+        sys.exit(2)
 
-elif a == 'press':
-    m = get_data(sense.get_pressure(),a,1200,950)
+    if m != 0:
+        print( round(m, 1) )
+        sys.exit(0)
+    else:
+        sys.exit(1)
 
-elif a == 'humid':
-    m = get_data(sense.get_humidity(),a,50,5)
-
-elif a == 'comp':
-    m = get_data(sense.get_compass(),a,361,1)
-
-else:
-    print("Usage: sense <comp|temp|humid|press>")
-    sys.exit(2)
-
-if m != 0:
-    print( round(m, 1) )
-    sys.exit(0)
-else:
-    sys.exit(1)
+if __name__ == "__main__":
+    checkOptions(a)
