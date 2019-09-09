@@ -12,7 +12,7 @@ import datetime
 from sense_hat import SenseHat
 
 TEMP_OFFSET = 5
-OUTLIER_THRESHOLD = 2
+OUTLIER_THRESHOLD = 4
 retry = 15
 
 a = sys.argv[1]
@@ -49,7 +49,7 @@ def recordTemp(temp):
 def log(name,retry,r):
     with open('/tmp/rtcnt.txt','a') as l:
         l.write(curTime()+' '+str(name)+'('+str(retry)+'): '+str(r)+'\n')
-    l.closed
+    l.close()
 
 def curTime():
     now = datetime.datetime.now()
@@ -71,9 +71,9 @@ def get_data(func,name,upper,lower):
             retry -= 1
             time.sleep( 1 )
         else:
-            log(name,retry,r)
+            log("good-"+name,retry,r)
             return(r)
-    log(name,retry,r)
+    log("expire-"+name,retry,r)
     sys.exit(3)
 
 def checkOptions(a):
